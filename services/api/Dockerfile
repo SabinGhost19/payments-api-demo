@@ -2,7 +2,7 @@
 # distroless/static-debian12:nonroot contains no shell, no package manager,
 # nothing executable beyond our binary -> Trivy/SBOM report effectively
 # nothing to flag. Used intentionally as the "clean Verified" sample.
-FROM golang:1.22-alpine AS build
+FROM golang:1.26-alpine AS build
 WORKDIR /src
 COPY go.mod ./
 RUN go mod download
