@@ -154,11 +154,6 @@ jobs:
       IMAGE_REPO: ${{ needs.build-push-api.outputs.image_repo }}
       IMAGE_DIGEST: ${{ needs.build-push-api.outputs.image_digest }}
       SERVICE: api
-      MANIFESTS_REPO_ENV: ${{ env.MANIFESTS_REPO }}
-      MANIFESTS_REF_ENV: ${{ env.MANIFESTS_REF }}
-      MANIFESTS_CHECKOUT_PATH_ENV: ${{ env.MANIFESTS_CHECKOUT_PATH }}
-      MANIFESTS_SUBPATH_ENV: ${{ env.MANIFESTS_SUBPATH }}
-      GH_REPOSITORY_ENV: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -222,7 +217,7 @@ jobs:
       - name: Verify SBOM with retry on Rekor lag
         run: |
           IMAGE_REF="${IMAGE_REPO}@${IMAGE_DIGEST}"
-          IDENTITY="https://github.com/${GH_REPOSITORY_ENV}/.github/workflows/ci-cd.yaml@refs/heads/main"
+          IDENTITY="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/ci-cd.yaml@refs/heads/main"
           set +e
           for attempt in 1 2 3 4 5; do
             cosign verify-attestation "$IMAGE_REF" --type spdxjson \
@@ -242,9 +237,6 @@ jobs:
       IMAGE_REPO: ${{ needs.build-push-worker.outputs.image_repo }}
       IMAGE_DIGEST: ${{ needs.build-push-worker.outputs.image_digest }}
       SERVICE: worker
-      MANIFESTS_CHECKOUT_PATH_ENV: ${{ env.MANIFESTS_CHECKOUT_PATH }}
-      MANIFESTS_SUBPATH_ENV: ${{ env.MANIFESTS_SUBPATH }}
-      GH_REPOSITORY_ENV: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -370,9 +362,6 @@ jobs:
     env:
       API_IMAGE: ${{ needs.build-push-api.outputs.image_repo }}@${{ needs.build-push-api.outputs.image_digest }}
       WORKER_IMAGE: ${{ needs.build-push-worker.outputs.image_repo }}@${{ needs.build-push-worker.outputs.image_digest }}
-      MANIFESTS_REPO_ENV: ${{ env.MANIFESTS_REPO }}
-      MANIFESTS_REF_ENV: ${{ env.MANIFESTS_REF }}
-      MANIFESTS_SUBPATH_ENV: ${{ env.MANIFESTS_SUBPATH }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -390,16 +379,16 @@ jobs:
           set -euo pipefail
           cd manifests-repo
           export NEW_IMAGE="$API_IMAGE"
-          if [ -f "${MANIFESTS_SUBPATH_ENV}/api/zta-api.yaml" ]; then
-            yq eval -i '(select(.kind == "ZeroTrustApplication") | .spec.image) = strenv(NEW_IMAGE)' "${MANIFESTS_SUBPATH_ENV}/api/zta-api.yaml"
+          if [ -f "${MANIFESTS_SUBPATH}/api/zta-api.yaml" ]; then
+            yq eval -i '(select(.kind == "ZeroTrustApplication") | .spec.image) = strenv(NEW_IMAGE)' "${MANIFESTS_SUBPATH}/api/zta-api.yaml"
           fi
           export NEW_IMAGE="$WORKER_IMAGE"
-          if [ -f "${MANIFESTS_SUBPATH_ENV}/worker/zta-worker.yaml" ]; then
-            yq eval -i '(select(.kind == "ZeroTrustApplication") | .spec.image) = strenv(NEW_IMAGE)' "${MANIFESTS_SUBPATH_ENV}/worker/zta-worker.yaml"
+          if [ -f "${MANIFESTS_SUBPATH}/worker/zta-worker.yaml" ]; then
+            yq eval -i '(select(.kind == "ZeroTrustApplication") | .spec.image) = strenv(NEW_IMAGE)' "${MANIFESTS_SUBPATH}/worker/zta-worker.yaml"
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --quiet && echo "no changes" && exit 0
           git commit -m "chore(image): bump payments [skip ci]"
-          git push origin "${MANIFESTS_REF_ENV}"
+          git push origin "${MANIFESTS_REF}"
