@@ -1,0 +1,23 @@
+# Source security policy attested by zta-policy-attestor.
+# Encoded as JSON predicate and attached to each pushed image.
+# The cluster-side SCA (`payments-strict-policy`) is the ENFORCED counterpart;
+# this file is the EVIDENCE the operator cross-checks against.
+securityBoundaries:
+  network:
+    allowGlobalInternet: false
+    allowedEgressNamespaces:
+      - database
+      - observability
+    restrictedPorts:
+      - 22
+      - 3389
+provenance:
+  requireVoucher: true
+  minSlsaLevel: 3
+  trustedRepositories:
+    - SabinGhost19/payments-api-demo
+runtime:
+  onCompromise: Isolate
+  allowedPaths:
+    - /tmp
+    - /var/run
