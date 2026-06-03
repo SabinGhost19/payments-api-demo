@@ -19,6 +19,17 @@ func TestComputeQuote(t *testing.T) {
 	}
 }
 
+func TestComputeQuote2(t *testing.T) {
+	// fee = round(10000 * 0.029) + 30 = 290 + 30 = 320; net = 9680
+	q, err := computeQuote(10000, "USD")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if q.Fee != 320 || q.Net != 9680 || q.Amount != 10000 || q.Currency != "USD" {
+		t.Fatalf("unexpected quote: %+v", q)
+	}
+}
+
 func TestComputeQuoteRejectsBadInput(t *testing.T) {
 	if _, err := computeQuote(0, "USD"); err == nil {
 		t.Fatal("expected error for non-positive amount")
