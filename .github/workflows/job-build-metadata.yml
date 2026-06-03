@@ -1,0 +1,38 @@
+# Reusable job: build metadata (compile sanity) for both Go services.
+# Compiles api + worker (go build) and uploads the lint JSON artifacts
+# (vbbi-lint-api / vbbi-lint-worker) consumed later by the VBBI attestation.
+# Real unit tests live in job-unit-tests.yml.
+name: job-build-metadata
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (StepSecurity)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - name: Compile sanity (api)
+        working-directory: services/api
+        run: |
+          go build ./...
+          printf '{"exit_code":0,"linter":"go-build","violation_count":0,"service":"api"}' > /tmp/lint-api.json
+      - name: Compile sanity (worker)
+        working-directory: services/worker
+        run: |
+          go build ./...
+          printf '{"exit_code":0,"linter":"go-build","violation_count":0,"service":"worker"}' > /tmp/lint-worker.json
+      - uses: actions/upload-artifact@v4
+        with: { name: vbbi-lint-api, path: /tmp/lint-api.json }
+      - uses: actions/upload-artifact@v4
+        with: { name: vbbi-lint-worker, path: /tmp/lint-worker.json }

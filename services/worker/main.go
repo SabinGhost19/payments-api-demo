@@ -21,16 +21,25 @@ func processOne(ctx context.Context) {
 	}
 }
 
+// parseInterval is a pure helper (unit-testable) that turns the TICK_INTERVAL
+// env value into a positive duration, falling back to def for empty, invalid
+// or non-positive values.
+func parseInterval(raw string, def time.Duration) time.Duration {
+	if raw == "" {
+		return def
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil || d <= 0 {
+		return def
+	}
+	return d
+}
+
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	interval := 2 * time.Second
-	if v := os.Getenv("TICK_INTERVAL"); v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			interval = d
-		}
-	}
+	interval := parseInterval(os.Getenv("TICK_INTERVAL"), 2*time.Second)
 
 	log.Printf("payments-worker starting (tick=%s)", interval)
 	ticker := time.NewTicker(interval)

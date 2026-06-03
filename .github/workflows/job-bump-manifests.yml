@@ -1,0 +1,71 @@
+# Reusable job: GitOps push-back. Bumps the api + worker image digests in the
+# manifests repo so the ZTA YAML references the exact digests that were attested.
+name: job-bump-manifests
+
+on:
+  workflow_call:
+    inputs:
+      api_image:
+        description: Fully-qualified api image ref (repo@digest)
+        required: true
+        type: string
+      worker_image:
+        description: Fully-qualified worker image ref (repo@digest)
+        required: true
+        type: string
+      manifests_repo:
+        required: true
+        type: string
+      manifests_ref:
+        required: true
+        type: string
+      manifests_subpath:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  bump-manifests:
+    runs-on: ubuntu-latest
+    env:
+      API_IMAGE: ${{ inputs.api_image }}
+      WORKER_IMAGE: ${{ inputs.worker_image }}
+      MANIFESTS_REPO: ${{ inputs.manifests_repo }}
+      MANIFESTS_REF: ${{ inputs.manifests_ref }}
+      MANIFESTS_SUBPATH: ${{ inputs.manifests_subpath }}
+    steps:
+      - name: Harden the runner (StepSecurity)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.MANIFESTS_REPO }}
+          ref: ${{ env.MANIFESTS_REF }}
+          token: ${{ secrets.MANIFESTS_REPO_TOKEN }}
+          path: manifests-repo
+          persist-credentials: true
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+      - name: Bump api + worker image digests
+        run: |
+          set -euo pipefail
+          cd manifests-repo
+          export NEW_IMAGE="$API_IMAGE"
+          if [ -f "${MANIFESTS_SUBPATH}/api/zta-api.yaml" ]; then
+            yq eval -i '(select(.kind == "ZeroTrustApplication") | .spec.image) = strenv(NEW_IMAGE)' "${MANIFESTS_SUBPATH}/api/zta-api.yaml"
+          fi
+          export NEW_IMAGE="$WORKER_IMAGE"
+          if [ -f "${MANIFESTS_SUBPATH}/worker/zta-worker.yaml" ]; then
+            yq eval -i '(select(.kind == "ZeroTrustApplication") | .spec.image) = strenv(NEW_IMAGE)' "${MANIFESTS_SUBPATH}/worker/zta-worker.yaml"
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "no changes" && exit 0
+          git commit -m "chore(image): bump payments [skip ci]"
+          git push origin "${MANIFESTS_REF}"

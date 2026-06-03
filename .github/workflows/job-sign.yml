@@ -1,0 +1,44 @@
+# Reusable job: sign one service image (cosign keyless). Parameterized by image.
+#
+# IMPORTANT (keyless identity): cosign runs INSIDE this reusable workflow, so the
+# Fulcio certificate SAN is this file's path. The cluster consumer must trust:
+#   .../.github/workflows/job-sign.yml@refs/heads/main
+name: job-sign
+
+on:
+  workflow_call:
+    inputs:
+      registry:
+        required: true
+        type: string
+      image_repo:
+        required: true
+        type: string
+      image_digest:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: ${{ inputs.registry }}
+      IMAGE_REPO: ${{ inputs.image_repo }}
+      IMAGE_DIGEST: ${{ inputs.image_digest }}
+    steps:
+      - name: Harden the runner (StepSecurity)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: cosign sign --yes "${IMAGE_REPO}@${IMAGE_DIGEST}"

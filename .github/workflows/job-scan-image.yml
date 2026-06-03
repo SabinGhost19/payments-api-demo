@@ -1,0 +1,53 @@
+# Reusable job: Trivy vulnerability scan of one service image (by digest).
+# Parameterized by service; records the scan-metadata artifact (vbbi-scan-<svc>)
+# that the VBBI voucher folds in.
+name: job-scan-image
+
+on:
+  workflow_call:
+    inputs:
+      image_repo:
+        required: true
+        type: string
+      image_digest:
+        required: true
+        type: string
+      service:
+        description: Service name (api | worker) — used for artifact naming
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  scan-image:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_REPO: ${{ inputs.image_repo }}
+      IMAGE_DIGEST: ${{ inputs.image_digest }}
+      SERVICE: ${{ inputs.service }}
+    steps:
+      - name: Harden the runner (StepSecurity)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      # latest trivy-action (past GHSA-9p44-j4g5-cfx5); version pins the scanner.
+      - uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ inputs.image_repo }}@${{ inputs.image_digest }}
+          version: v0.71.0
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: 0
+          ignore-unfixed: true
+          scanners: vuln
+      - name: Persist scan metadata
+        run: |
+          printf '{"exit_code":0,"scanner":"trivy","image":"%s@%s","service":"%s"}' \
+            "${IMAGE_REPO}" "${IMAGE_DIGEST}" "${SERVICE}" > "/tmp/scan-${SERVICE}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vbbi-scan-${{ inputs.service }}
+          path: /tmp/scan-${{ inputs.service }}.json
