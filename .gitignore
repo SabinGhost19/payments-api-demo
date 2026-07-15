@@ -23,6 +23,9 @@ test-*.json
 scan-*.json
 build-results-*.json
 
+# ---- Logs ----
+*.log
+
 # ---- OS / editors ----
 .DS_Store
 Thumbs.db

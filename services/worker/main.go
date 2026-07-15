@@ -17,7 +17,7 @@ func processOne(ctx context.Context) {
 	case <-ctx.Done():
 		return
 	case <-time.After(time.Second):
-		log.Printf("processed payment batch at %s", time.Now().UTC().Format(time.RFC3339))
+		log.Printf("payment batch at %s", time.Now().UTC().Format(time.RFC3339))
 	}
 }
 

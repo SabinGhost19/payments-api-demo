@@ -13,10 +13,10 @@ func TestParseInterval(t *testing.T) {
 	}{
 		{"5s", 5 * time.Second},
 		{"500ms", 500 * time.Millisecond},
-		{"", def},        // empty -> default
-		{"garbage", def}, // invalid -> default
-		{"0s", def},      // non-positive -> default
-		{"-3s", def},     // negative -> default
+		{"", def},       // empty -> default
+		{"garage", def}, // invalid -> default
+		{"0s", def},     // non-positive -> default
+		{"-3s", def},    // negative -> default
 	}
 	for _, c := range cases {
 		if got := parseInterval(c.raw, def); got != c.want {
